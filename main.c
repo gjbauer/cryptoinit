@@ -260,8 +260,8 @@ int main(int argc, char **argv)
   schedule192 = malloc(sizeof(struct aes192_schedule));
   schedule256 = malloc(sizeof(struct aes256_schedule));
 
-  export_directory = malloc(6);
-  strcpy(export_directory, "/root");
+  export_directory = malloc(11);
+  strcpy(export_directory, "/root/keys");
 
   int i = 1;
   while (i < argc)
