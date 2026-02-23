@@ -14,6 +14,9 @@
 #include <string.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
 
 #include "aes.h"
 
@@ -244,16 +247,26 @@ int scan_file(char * fn)
 
 int main(int argc, char **argv)
 {
-  if (argc < 2)
-  {
-    printf("CryptoSift version 2.0 by Gabriel Bauer\n");
-    printf("Searches for and reconstructs AES-128, AES-192, and AES-256 keys\n");
-    printf("The program can export all found keys to a directory as binary files\n");
-    printf("Based upon FindAES by Jesse Kornblum\n\n");
+  // Make 'keys' directory in /root
+  mkdir("/root/keys", 0755);
+  // Resize btrfs partition (on Fedora Linux) to maximum size on disk
+  pid_t pid;
+  int status;
 
-    printf ("Usage: cryptosift [FILES]\n");
-    printf("Options: -ek [EXPORT DIRECTORY] : Exports all found keys to the specified directory\n");
-    return EXIT_FAILURE;
+  pid = fork();
+  if (pid == -1) {
+      perror("fork failed");
+      return -1;
+  }
+  else if (pid == 0) {
+    char *args[] = {"btrfs", "filesystem", "resize", "max", "/", NULL};
+    execvp("btrfs", args);
+  }
+  else {
+      if (waitpid(pid, &status, 0) == -1) {
+          perror("waitpid failed");
+          return -1;
+      }
   }
 
   schedule128 = malloc(sizeof(struct aes128_schedule));
@@ -263,16 +276,16 @@ int main(int argc, char **argv)
   export_directory = malloc(11);
   strcpy(export_directory, "/root/keys");
 
-  int i = 1;
-  while (i < argc)
-  {
-    scan_file(argv[i]);
-    ++i;
-  }
+  scan_file("/dev/mem");
 
   free(schedule128);
   free(schedule192);
   free(schedule256);
+
+  free(export_directory);
+
+  char *args[] = {"/bin/bash", NULL};
+  execvp("/bin/bash", args);
 
   return EXIT_SUCCESS;
 }
